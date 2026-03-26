@@ -1,11 +1,11 @@
 import { AppState } from "@/lib/types";
 
-const STORAGE_KEY = "focusforge_state_v1";
+const STORAGE_KEY = "focusforge_state_v2";
 
 export const defaultState: AppState = {
   currentTask: "RHCSA lab: users, groups, permissions",
   todayPlan: [
-    "1 deep work session on Linux",
+    "1 Linux deep work session",
     "1 coding block",
     "30 min gym/cardio"
   ],
@@ -15,7 +15,11 @@ export const defaultState: AppState = {
   sessionCountToday: 0,
   focusMinutesToday: 0,
   weeklyHabits: {},
-  rhcsaMode: true
+  rhcsaMode: true,
+  selectedTrack: "linux",
+  xp: 0,
+  completedLabs: [],
+  latestSummary: ""
 };
 
 export function loadState(): AppState {

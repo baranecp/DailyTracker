@@ -12,12 +12,24 @@ export type HabitDefinition = {
 
 export type FocusMode = "focus" | "break";
 
-export type DailyStats = {
-  date: string;
-  sessionsCompleted: number;
-  focusMinutes: number;
-  habitsCompleted: HabitKey[];
+export type SessionTrack = "linux" | "coding" | "study";
+
+export type ChatRole = "user" | "assistant";
+
+export type ChatMessage = {
+  role: ChatRole;
+  content: string;
 };
+
+export type RhcsaLab = {
+  id: string;
+  title: string;
+  objective: string;
+  commands: string[];
+  expectedResult: string;
+};
+
+export type AppLevel = "Beginner" | "Junior Admin" | "SysAdmin" | "RHCSA Ready";
 
 export type AppState = {
   currentTask: string;
@@ -29,4 +41,8 @@ export type AppState = {
   focusMinutesToday: number;
   weeklyHabits: Record<string, HabitKey[]>;
   rhcsaMode: boolean;
+  selectedTrack: SessionTrack;
+  xp: number;
+  completedLabs: string[];
+  latestSummary: string;
 };

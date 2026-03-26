@@ -1,58 +1,77 @@
 # FocusForge
 
-FocusForge is a minimal, dark-mode productivity app built for anti-procrastination, deep work, and RHCSA + coding progress.
+FocusForge is a minimal **Linux Learning Companion + Focus System** built with Next.js, Tailwind, and localStorage.
+
+## What’s included
+- Pomodoro deep work timer (25/5) with progress and fullscreen anti-procrastination mode
+- Track selection before session: Linux Practice / Coding / Study
+- Habit tracker (5 fixed habits) with streak + weekly completion
+- Daily dashboard + distraction reset + low energy mode
+- **AI Linux Coach chat** (Explain / Give Task / Quiz Me)
+- **RHCSA Training Mode** with structured labs and mark-as-done flow
+- **Smart Practice Generator** (`Generate Practice`)
+- **AI Session Summary** after completed focus sessions
+- **XP + Level system** (Beginner → RHCSA Ready)
+- Simple frontend **Terminal Simulation** (`ls`, `cd`, `mkdir`, `pwd`)
 
 ## Stack
-- Next.js (App Router)
+- Next.js App Router
 - Tailwind CSS
-- LocalStorage for persistence
+- Local storage persistence
+- Next.js API routes for AI endpoints
 
-## Features
-- Deep Work Timer (25/5 Pomodoro + progress + session counter)
-- Anti-Procrastination Mode (fullscreen minimal session view)
-- Habit Tracker (5 fixed habits, streak, weekly view, completion rate)
-- Daily System Dashboard (today's plan, sessions, habits, focus hours)
-- Distraction Reset button (`I got distracted`)
-- Low Motivation Mode (`Low energy today` for easy 5-minute tasks)
-- RHCSA Mode (Linux command/lab/terminal challenge suggestions)
-- Keyboard shortcuts:
-  - `Space` start/pause timer
-  - `D` distracted reset
-  - `L` low energy mode
-  - `F` fullscreen
+## API routes
+- `POST /api/coach`
+- `POST /api/generate-practice`
+- `POST /api/session-summary`
 
-## Local setup
-1. Install dependencies:
+## OpenAI setup (optional)
+If no API key is present, FocusForge uses built-in **mock mode**.
+
+1. Create `.env.local`:
+   ```bash
+   OPENAI_API_KEY=your_key_here
+   OPENAI_MODEL=gpt-4.1-mini
+   ```
+2. Install packages:
    ```bash
    npm install
    ```
-2. Start dev server:
+3. Run locally:
    ```bash
    npm run dev
    ```
-3. Open `http://localhost:3000`
+4. Open `http://localhost:3000`
 
-## Project structure
+## Example prompts used
+- "Explain chmod with one practical example."
+- "Give me one RHCSA beginner task I can do in 10 minutes."
+- "Quiz me on basic Linux commands with 3 quick questions."
+
+## Updated structure
 ```
 app/
+  api/
+    coach/route.ts
+    generate-practice/route.ts
+    session-summary/route.ts
+  globals.css
   layout.tsx
   page.tsx
-  globals.css
 components/
+  AICoachPanel.tsx
   AntiProcrastinationOverlay.tsx
   Dashboard.tsx
   DeepWorkTimer.tsx
   HabitTracker.tsx
   RHCSAMode.tsx
+  RHCSATraining.tsx
+  TerminalSim.tsx
+  XPBadge.tsx
+hooks/
+  usePersistentState.ts
 lib/
   constants.ts
   storage.ts
   types.ts
 ```
-
-## Future expansions
-- Optional Node backend + auth for multi-device sync
-- Site blocker integrations (browser extension or hosts-file assistant)
-- Weekly review and planning flow
-- Achievement system and adaptive session lengths
-- RHCSA lab generator with random objectives + checklists

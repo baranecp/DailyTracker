@@ -1,24 +1,34 @@
 "use client";
 
-import { FocusMode } from "@/lib/types";
+import { FocusMode, SessionTrack } from "@/lib/types";
 
 type Props = {
   mode: FocusMode;
+  selectedTrack: SessionTrack;
   secondsLeft: number;
   totalSeconds: number;
   isRunning: boolean;
   sessionsToday: number;
+  onTrackChange: (track: SessionTrack) => void;
   onStart: () => void;
   onPause: () => void;
   onReset: () => void;
 };
 
+const tracks: { key: SessionTrack; label: string }[] = [
+  { key: "linux", label: "Linux Practice" },
+  { key: "coding", label: "Coding" },
+  { key: "study", label: "Study" }
+];
+
 export function DeepWorkTimer({
   mode,
+  selectedTrack,
   secondsLeft,
   totalSeconds,
   isRunning,
   sessionsToday,
+  onTrackChange,
   onStart,
   onPause,
   onReset
@@ -35,6 +45,20 @@ export function DeepWorkTimer({
         <span className="rounded-full border border-slate-700 px-3 py-1 text-sm text-textMuted">
           {mode === "focus" ? "Focus" : "Break"}
         </span>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        {tracks.map((track) => (
+          <button
+            key={track.key}
+            onClick={() => onTrackChange(track.key)}
+            className={`focus-ring rounded-lg border px-3 py-2 text-sm ${
+              selectedTrack === track.key ? "border-accent bg-accent/10" : "border-slate-700 bg-panelAlt"
+            }`}
+          >
+            {track.label}
+          </button>
+        ))}
       </div>
 
       <p className="text-5xl font-bold tracking-wider">{minutes}:{seconds}</p>
