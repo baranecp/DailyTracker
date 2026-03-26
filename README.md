@@ -13,6 +13,8 @@ FocusForge is a minimal **Linux Learning Companion + Focus System** built with N
 - **AI Session Summary** after completed focus sessions
 - **XP + Level system** (Beginner → RHCSA Ready)
 - Simple frontend **Terminal Simulation** (`ls`, `cd`, `mkdir`, `pwd`)
+- Focus audio: gentle lofi pulse on focus start + alarm at focus completion
+- Space shortcut is disabled while typing in input/textarea fields (AI chat safe)
 
 ## Stack
 - Next.js App Router

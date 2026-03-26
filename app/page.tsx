@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AICoachPanel } from "@/components/AICoachPanel";
 import { AntiProcrastinationOverlay } from "@/components/AntiProcrastinationOverlay";
 import { Dashboard } from "@/components/Dashboard";
@@ -24,6 +24,12 @@ import { dayKey, defaultState, getLast7Days, loadState, saveState } from "@/lib/
 import { FocusMode, HabitKey } from "@/lib/types";
 import { usePersistentState } from "@/hooks/usePersistentState";
 
+function isTypingElement(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea" || target.isContentEditable;
+}
+
 export default function HomePage() {
   const load = useCallback(() => loadState(), []);
   const save = useCallback((value: typeof defaultState) => saveState(value), []);
@@ -34,9 +40,85 @@ export default function HomePage() {
   const [secondsLeft, setSecondsLeft] = useState(DEFAULT_FOCUS_SECONDS);
   const [fullScreenMode, setFullScreenMode] = useState(false);
   const [generatedPractice, setGeneratedPractice] = useState("");
+  const [lofiOnStart, setLofiOnStart] = useState(true);
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const lofiOscRef = useRef<OscillatorNode | null>(null);
+  const lofiGainRef = useRef<GainNode | null>(null);
+  const lofiPulseIntervalRef = useRef<number | null>(null);
 
   const appState = state ?? defaultState;
   const today = dayKey();
+
+  const stopLofi = useCallback(() => {
+    if (lofiPulseIntervalRef.current) {
+      window.clearInterval(lofiPulseIntervalRef.current);
+      lofiPulseIntervalRef.current = null;
+    }
+
+    lofiOscRef.current?.stop();
+    lofiOscRef.current?.disconnect();
+    lofiGainRef.current?.disconnect();
+
+    lofiOscRef.current = null;
+    lofiGainRef.current = null;
+  }, []);
+
+  const startLofi = useCallback(() => {
+    if (lofiOscRef.current) return;
+
+    const ctx = audioContextRef.current ?? new AudioContext();
+    audioContextRef.current = ctx;
+
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.value = 88;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 520;
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.0001;
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+
+    const pulse = () => {
+      const now = ctx.currentTime;
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.022, now + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.68);
+    };
+
+    pulse();
+    lofiPulseIntervalRef.current = window.setInterval(pulse, 1200);
+
+    lofiOscRef.current = osc;
+    lofiGainRef.current = gain;
+  }, []);
+
+  const playAlarm = useCallback(() => {
+    const ctx = audioContextRef.current ?? new AudioContext();
+    audioContextRef.current = ctx;
+
+    [0, 0.22, 0.44].forEach((offset, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(idx % 2 === 0 ? 920 : 720, ctx.currentTime + offset);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + offset);
+      gain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + offset + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + offset + 0.17);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + offset);
+      osc.stop(ctx.currentTime + offset + 0.18);
+    });
+  }, []);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -56,6 +138,8 @@ export default function HomePage() {
                 : s
             );
             void generateSessionSummary();
+            playAlarm();
+            stopLofi();
             setMode("break");
             return DEFAULT_BREAK_SECONDS;
           }
@@ -68,11 +152,13 @@ export default function HomePage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isRunning, mode, setState]);
+  }, [isRunning, mode, playAlarm, setState, stopLofi]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === " ") {
+      if (isTypingElement(event.target)) return;
+
+      if (event.code === "Space") {
         event.preventDefault();
         setIsRunning((v) => !v);
       }
@@ -90,6 +176,15 @@ export default function HomePage() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   });
+
+  useEffect(() => {
+    return () => {
+      stopLofi();
+      if (audioContextRef.current) {
+        void audioContextRef.current.close();
+      }
+    };
+  }, [stopLofi]);
 
   const weeklyHabits = useMemo(() => {
     const base = { ...appState.weeklyHabits };
@@ -148,11 +243,13 @@ export default function HomePage() {
   const startSession = async () => {
     setIsRunning(true);
     markHabit("start_focus_session");
+    if (lofiOnStart) startLofi();
     await enterFullscreen();
   };
 
   const resetTimer = () => {
     setIsRunning(false);
+    stopLofi();
     setMode("focus");
     setSecondsLeft(DEFAULT_FOCUS_SECONDS);
   };
@@ -252,7 +349,7 @@ export default function HomePage() {
           <p className="text-sm text-textMuted">Linux Learning Companion + Focus System</p>
         </div>
         <p className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-textMuted">
-          Shortcuts: [Space] start/pause · [D] distracted · [L] low energy · [F] fullscreen
+          Shortcuts: [Space] start/pause · [D] distracted · [L] low energy · [F] fullscreen (disabled while typing)
         </p>
       </header>
 
@@ -268,7 +365,10 @@ export default function HomePage() {
               sessionsToday={appState.sessionCountToday}
               onTrackChange={(track) => setState((prev) => (prev ? { ...prev, selectedTrack: track } : prev))}
               onStart={startSession}
-              onPause={() => setIsRunning(false)}
+              onPause={() => {
+                setIsRunning(false);
+                stopLofi();
+              }}
               onReset={resetTimer}
             />
 
@@ -279,6 +379,19 @@ export default function HomePage() {
               focusHours={appState.focusMinutesToday / 60}
             />
           </div>
+
+          <section className="card flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold">Audio</h2>
+              <p className="text-xs text-textMuted">Play gentle lofi pulse when focus starts + alarm at focus end.</p>
+            </div>
+            <button
+              onClick={() => setLofiOnStart((prev) => !prev)}
+              className="focus-ring rounded-lg border border-slate-700 px-3 py-2 text-sm"
+            >
+              {lofiOnStart ? "Lofi On" : "Lofi Off"}
+            </button>
+          </section>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <HabitTracker
